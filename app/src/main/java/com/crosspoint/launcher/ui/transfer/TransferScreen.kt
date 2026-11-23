@@ -406,7 +406,7 @@ private fun escapeWifiQrValue(value: String): String =
 private fun Context.isLocationEnabled(): Boolean =
     runCatching {
         val manager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        manager.isLocationEnabled
+        androidx.core.location.LocationManagerCompat.isLocationEnabled(manager)
     }.getOrDefault(false)
 
 private fun qrBitmap(contents: String, size: Int): Bitmap {

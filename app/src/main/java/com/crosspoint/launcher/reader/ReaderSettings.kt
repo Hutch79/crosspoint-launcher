@@ -88,6 +88,13 @@ class ReaderSettings(private val prefs: SharedPreferences) {
          * name), then the upright faces nearest 400 and 700 become Regular and Bold, and the same for italics.
          */
         @Synchronized fun loadFamily(files: List<File>): Typeface? = loaded.getOrPut(files.joinToString("|") { "${it.path}:${it.lastModified()}" }) {
+            // Font.Builder and CustomFallbackBuilder need Android 10. Before that, load the upright regular face and
+            // let Android synthesize bold and italic.
+            if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
+                val styled = Regex("bold|italic|oblique")
+                val regular = files.firstOrNull { !styled.containsMatchIn(it.nameWithoutExtension.lowercase()) } ?: files.firstOrNull()
+                return@getOrPut regular?.let { runCatching { Typeface.Builder(it).build() }.getOrNull() }
+            }
             runCatching {
                 class Face(val file: File, val weight: Int, val italic: Boolean)
                 val faces = files.mapNotNull { file ->

@@ -4,7 +4,6 @@ import android.Manifest
 import com.crosspoint.launcher.ui.components.nativeScreenHeader
 import com.crosspoint.launcher.ui.components.headerAction
 
-import android.app.role.RoleManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -62,12 +61,16 @@ class PermissionSetupActivity : ComponentActivity() {
     override fun onSaveInstanceState(outState: Bundle) { outState.putInt("step", step); super.onSaveInstanceState(outState) }
 
     private fun wifiPermission() = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.NEARBY_WIFI_DEVICES else Manifest.permission.ACCESS_FINE_LOCATION
+    // Before Android 11 there is no all-files access; writing books to shared storage needs WRITE_EXTERNAL_STORAGE.
+    private fun storagePermissions() = if (Build.VERSION.SDK_INT < 30)
+        arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
     private fun has(permission: String) = checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
     private fun granted(): Boolean = when (key) {
-        "storage" -> (Build.VERSION.SDK_INT > 32 || has(Manifest.permission.READ_EXTERNAL_STORAGE)) &&
+        "storage" -> (Build.VERSION.SDK_INT > 32 || storagePermissions().all(::has)) &&
             (Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager())
         "wifi" -> has(wifiPermission()) && (Build.VERSION.SDK_INT >= 33 || has(Manifest.permission.ACCESS_COARSE_LOCATION))
-        "home" -> getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_HOME) == true
+        "home" -> Launching.isDefaultHome(this)
         else -> true  // tip screens are informational
     }
 
@@ -84,16 +87,15 @@ class PermissionSetupActivity : ComponentActivity() {
     private fun requestAccess() {
         try {
             when (key) {
-                "storage" -> if (Build.VERSION.SDK_INT <= 32 && !has(Manifest.permission.READ_EXTERNAL_STORAGE))
-                    requestRuntime(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE))
+                "storage" -> if (Build.VERSION.SDK_INT <= 32 && !storagePermissions().all(::has))
+                    requestRuntime(storagePermissions())
                     else Launching.openManageStorageSettings(this)
                 "wifi" -> requestRuntime(if (Build.VERSION.SDK_INT < 33)
                     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION)
                     else arrayOf(wifiPermission()))
                 else -> {
-                    val manager = getSystemService(RoleManager::class.java)
-                    if (manager?.isRoleAvailable(RoleManager.ROLE_HOME) == true)
-                        homeRequest.launch(manager.createRequestRoleIntent(RoleManager.ROLE_HOME))
+                    val request = Launching.requestHomeRoleIntent(this)
+                    if (request != null) homeRequest.launch(request)
                     else Launching.openHomeSettings(this)
                 }
             }

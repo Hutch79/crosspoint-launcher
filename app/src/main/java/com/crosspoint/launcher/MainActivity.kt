@@ -2,7 +2,6 @@ package com.crosspoint.launcher
 
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
-import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
@@ -143,18 +142,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshDefaultHome() {
-        val rm = getSystemService(RoleManager::class.java)
-        isDefaultHome.value = rm?.isRoleHeld(RoleManager.ROLE_HOME) ?: false
+        isDefaultHome.value = Launching.isDefaultHome(this)
     }
 
     private fun requestDefaultHome() {
-        val rm = getSystemService(RoleManager::class.java)
-        if (rm != null && rm.isRoleAvailable(RoleManager.ROLE_HOME) && !rm.isRoleHeld(RoleManager.ROLE_HOME)) {
-            runCatching { roleLauncher.launch(rm.createRequestRoleIntent(RoleManager.ROLE_HOME)) }
-                .onFailure { Launching.openHomeSettings(this) }
-        } else if (rm?.isRoleHeld(RoleManager.ROLE_HOME) != true) {
-            Launching.openHomeSettings(this)
-        }
+        if (Launching.isDefaultHome(this)) return
+        val request = Launching.requestHomeRoleIntent(this)
+        if (request != null) runCatching { roleLauncher.launch(request) }.onFailure { Launching.openHomeSettings(this) }
+        else Launching.openHomeSettings(this)
     }
 
     private fun pickCoverWidget() {

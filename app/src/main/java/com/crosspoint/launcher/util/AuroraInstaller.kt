@@ -2,6 +2,7 @@ package com.crosspoint.launcher.util
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -28,9 +29,20 @@ object AuroraInstaller {
     }
 
     internal fun isSignedByFdroid(context: Context, file: File): Boolean {
-        val info = context.packageManager.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES)
-            ?: return false
-        val signers = info.signingInfo?.apkContentsSigners ?: return false
-        return info.packageName == PACKAGE && signers.any { ApkInstall.sha256(it.toByteArray()) == FDROID_CERT_SHA256 }
+        val signers = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            val info = context.packageManager.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNING_CERTIFICATES)
+                ?: return false
+            if (info.packageName != PACKAGE) return false
+            info.signingInfo?.apkContentsSigners ?: return false
+        } else {
+            // SigningInfo needs Android 9; older versions report the same certificates as signatures.
+            @Suppress("DEPRECATION")
+            val info = context.packageManager.getPackageArchiveInfo(file.path, PackageManager.GET_SIGNATURES)
+                ?: return false
+            if (info.packageName != PACKAGE) return false
+            @Suppress("DEPRECATION")
+            info.signatures ?: return false
+        }
+        return signers.any { ApkInstall.sha256(it.toByteArray()) == FDROID_CERT_SHA256 }
     }
 }
