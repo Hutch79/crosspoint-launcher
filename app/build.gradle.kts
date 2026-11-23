@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.crosspoint.launcher"
-        minSdk = 26
+        minSdk = 21
         targetSdk = 35
         testInstrumentationRunner = "com.crosspoint.launcher.IntegrationChecks"
         // scripts/release.sh passes versionCode; local builds stay at 1 so any release can update them.
@@ -43,6 +43,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // java.time and other Java 8+ library APIs on Android 5 to 7.
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlinOptions {
         jvmTarget = "17"
@@ -68,4 +70,5 @@ dependencies {
     implementation(libs.jmdns)
     implementation(libs.zxing.core)
     debugImplementation(libs.androidx.ui.tooling)
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 }

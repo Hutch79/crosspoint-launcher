@@ -2,7 +2,7 @@ package com.crosspoint.launcher.data
 
 import android.content.Context
 import android.net.Uri
-import android.text.Html
+import androidx.core.text.HtmlCompat
 import android.util.AtomicFile
 import android.util.Base64
 import com.crosspoint.launcher.model.OpdsServer
@@ -287,7 +287,7 @@ class OpdsHttp(private val context: Context) {
 
         private fun attr(tag: String, name: String): String? {
             val match = Regex("(?:^|\\s)$name\\s*=\\s*(?:\"([^\"]*)\"|'([^']*)'|([^\\s>]+))", RegexOption.IGNORE_CASE).find(tag) ?: return null
-            return Html.fromHtml(match.groupValues.drop(1).firstOrNull { it.isNotEmpty() }.orEmpty(), Html.FROM_HTML_MODE_LEGACY).toString()
+            return HtmlCompat.fromHtml(match.groupValues.drop(1).firstOrNull { it.isNotEmpty() }.orEmpty(), HtmlCompat.FROM_HTML_MODE_LEGACY).toString()
         }
 
         private val basicSessions = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()

@@ -6,7 +6,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import android.app.Activity
 import android.content.Intent
 import android.net.Uri
-import android.text.Html
+import androidx.core.text.HtmlCompat
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -186,7 +186,7 @@ fun OpdsBrowserScreen(servers: List<OpdsServer>, repo: OpdsRepository, onBooksCh
             } else if (selectedBook != null) {
                 val entry = selectedBook
                 item { BookInfo(entry, selectedServer, repo) }
-                val description = Html.fromHtml(entry.description, Html.FROM_HTML_MODE_COMPACT).toString()
+                val description = HtmlCompat.fromHtml(entry.description, HtmlCompat.FROM_HTML_MODE_COMPACT).toString()
                 items(description.chunked(280)) { part -> BodyText(part, size = 15, maxLines = 16) }
                 val actions = entry.links.filter { it.acquisition != null }
                 itemsIndexed(actions) { _, link ->

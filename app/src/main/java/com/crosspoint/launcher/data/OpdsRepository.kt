@@ -156,7 +156,7 @@ class OpdsRepository(private val context: Context) {
             val dir = File(Environment.getExternalStorageDirectory(), "Books").apply { mkdirs() }
             val partial = File.createTempFile(".opds-", ".part", dir)
             try {
-                val total = conn.contentLengthLong
+                val total = conn.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L
                 require(total <= 512L * 1024 * 1024) { "Book exceeds the 512 MB download limit" }
                 conn.inputStream.use { input -> partial.outputStream().use { out ->
                     val buffer = ByteArray(16 * 1024)

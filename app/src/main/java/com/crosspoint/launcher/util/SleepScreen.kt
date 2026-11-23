@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Rect
 import android.net.Uri
+import android.os.Build
 
 /**
  * Sets the e-ink sleep screen via the standard Android lock/system wallpaper (no root needed — on the
@@ -26,8 +27,10 @@ object SleepScreen {
         val m = context.resources.displayMetrics
         val out = Dither.toEink(fillCrop(source, m.widthPixels, m.heightPixels))
         val wm = WallpaperManager.getInstance(context)
-        wm.setBitmap(out, null, true, WallpaperManager.FLAG_SYSTEM)
-        wm.setBitmap(out, null, true, WallpaperManager.FLAG_LOCK)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            wm.setBitmap(out, null, true, WallpaperManager.FLAG_SYSTEM)
+            wm.setBitmap(out, null, true, WallpaperManager.FLAG_LOCK)
+        } else wm.setBitmap(out)  // one wallpaper for home and lock screen before Android 7
         return true
     }
 

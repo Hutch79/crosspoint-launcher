@@ -8,6 +8,7 @@ import android.graphics.Bitmap
 import android.location.LocationManager
 import android.net.wifi.WifiManager
 import android.os.Build
+import androidx.annotation.RequiresApi
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -128,7 +129,7 @@ fun TransferScreen(
                 hotspotInfo = null
             }
             ip = localIpAddress()
-            if (mode == TransferMode.HOTSPOT) {
+            if (mode == TransferMode.HOTSPOT && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val manager = context.applicationContext
                     .getSystemService(Context.WIFI_SERVICE) as WifiManager
                 try {
@@ -162,7 +163,7 @@ fun TransferScreen(
                 }
             }
             onDispose {
-                hotspotReservation?.close()
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) hotspotReservation?.close()
                 hotspotReservation = null
                 server.stop()
                 running = false
@@ -189,7 +190,11 @@ fun TransferScreen(
                     title = "Create Hotspot",
                     subtitle = "Create a local Wi-Fi network for direct uploads",
                     icon = "smartphone",
-                    onClick = {
+                    onClick = onClick@{
+                        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+                            hotspotInfo = HotspotInfo(error = "Creating a hotspot needs Android 8 or newer. Use Join Network instead.")
+                            return@onClick
+                        }
                         val missing = hotspotPermissions().filter {
                             ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
                         }.toTypedArray()
@@ -375,6 +380,7 @@ private fun hotspotFailureMessage(reason: Int): String =
         else -> "Hotspot failed to start ($reason)"
     }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Suppress("DEPRECATION")
 private fun WifiManager.LocalOnlyHotspotReservation.toHotspotInfo(): HotspotInfo =
     if (Build.VERSION.SDK_INT >= 30) {

@@ -150,8 +150,11 @@ class EpubPosition private constructor(private val nodes: List<Node>, private va
                         val sourceStart = visible
                         visible += raw.codePointCount(0, raw.length)
                         // Html.fromHtml may render head text (<title>) before the body; skip to the body's first character.
-                        if (nodes.isEmpty()) raw.codePoints().filter { !ignored(it) }.findFirst().ifPresent { code ->
-                            rendered.indexOf(String(Character.toChars(code)), cursor).takeIf { it >= 0 }?.let { cursor = it }
+                        if (nodes.isEmpty()) {
+                            // String.codePoints() needs Android 7.
+                            var at = 0
+                            while (at < raw.length && ignored(raw.codePointAt(at))) at += Character.charCount(raw.codePointAt(at))
+                            if (at < raw.length) rendered.indexOf(String(Character.toChars(raw.codePointAt(at))), cursor).takeIf { it >= 0 }?.let { cursor = it }
                         }
                         while (cursor < rendered.length && ignored(rendered.codePointAt(cursor))) cursor += Character.charCount(rendered.codePointAt(cursor))
                         val start = cursor

@@ -281,7 +281,7 @@ fun ReaderPanelScreen(host: ReaderPanelHost, panel: ReaderPanel, navigate: (Read
                         val foreground = colors.onBackground.toArgb()
                         AndroidView({ android.widget.TextView(it).apply { textSize = 16f } }, Modifier.fillMaxWidth().padding(vertical = 16.dp)) { view ->
                             view.setTextColor(foreground)
-                            view.text = if (entry.html) android.text.Html.fromHtml(entry.definition, android.text.Html.FROM_HTML_MODE_COMPACT) else entry.definition
+                            view.text = if (entry.html) androidx.core.text.HtmlCompat.fromHtml(entry.definition, androidx.core.text.HtmlCompat.FROM_HTML_MODE_COMPACT) else entry.definition
                         }
                     }
                     item { ActionRow("Look Up in Dictionary App", "Translators and installed dictionaries", "search") { host.openDictionaryApp(panel.word) } }
