@@ -27,6 +27,7 @@
         tools:targetApi="33" />
 
     <application
+        android:name=".CrossPointApp"
         android:allowBackup="true"
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true"

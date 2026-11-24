@@ -176,6 +176,8 @@ class PermissionSetupActivity : ComponentActivity() {
             insets
         }
         setContentView(screen)
+        // Before Android 11 a replaced content view is not sent the system bar insets again.
+        ViewCompat.requestApplyInsets(screen)
     }
 
     /** Simple line-art mock of a phone with the gesture arrow, for the tutorial screens. */
