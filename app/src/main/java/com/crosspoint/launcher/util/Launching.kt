@@ -1,8 +1,10 @@
 package com.crosspoint.launcher.util
 
+import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.CalendarContract
@@ -106,6 +108,21 @@ object Launching {
                 }
             )
         }
+    }
+
+    /** Whether CrossPoint is the default home app. RoleManager only exists on Android 10+. */
+    fun isDefaultHome(context: Context): Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+            context.getSystemService(RoleManager::class.java)?.isRoleHeld(RoleManager.ROLE_HOME) == true
+        else context.packageManager.resolveActivity(
+            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY
+        )?.activityInfo?.packageName == context.packageName
+
+    /** RoleManager's request-home intent, or null before Android 10 or when the role is unavailable. */
+    fun requestHomeRoleIntent(context: Context): Intent? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+        val manager = context.getSystemService(RoleManager::class.java) ?: return null
+        return if (manager.isRoleAvailable(RoleManager.ROLE_HOME)) manager.createRequestRoleIntent(RoleManager.ROLE_HOME) else null
     }
 
     fun openHomeSettings(context: Context) {

@@ -2,9 +2,9 @@ package com.crosspoint.launcher
 
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetManager
-import android.app.role.RoleManager
 import android.content.ComponentName
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -29,6 +29,8 @@ import com.crosspoint.launcher.ui.home.CROSSPOINT_WIDGET_HOST_ID
 import com.crosspoint.launcher.ui.theme.CrossPointTheme
 import com.crosspoint.launcher.ui.theme.Metrics
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.core.graphics.Insets
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -98,6 +100,16 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+        // Before Android 11 a hidden status bar still reports its height in the insets, which
+        // leaves an empty strip above the content. Drop it while the bar is hidden.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content)) { _, insets ->
+                if (!statusBarHidden) insets
+                else WindowInsetsCompat.Builder(insets)
+                    .setInsets(WindowInsetsCompat.Type.statusBars(), Insets.NONE)
+                    .build()
+            }
+        }
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -143,18 +155,14 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun refreshDefaultHome() {
-        val rm = getSystemService(RoleManager::class.java)
-        isDefaultHome.value = rm?.isRoleHeld(RoleManager.ROLE_HOME) ?: false
+        isDefaultHome.value = Launching.isDefaultHome(this)
     }
 
     private fun requestDefaultHome() {
-        val rm = getSystemService(RoleManager::class.java)
-        if (rm != null && rm.isRoleAvailable(RoleManager.ROLE_HOME) && !rm.isRoleHeld(RoleManager.ROLE_HOME)) {
-            runCatching { roleLauncher.launch(rm.createRequestRoleIntent(RoleManager.ROLE_HOME)) }
-                .onFailure { Launching.openHomeSettings(this) }
-        } else if (rm?.isRoleHeld(RoleManager.ROLE_HOME) != true) {
-            Launching.openHomeSettings(this)
-        }
+        if (Launching.isDefaultHome(this)) return
+        val request = Launching.requestHomeRoleIntent(this)
+        if (request != null) runCatching { roleLauncher.launch(request) }.onFailure { Launching.openHomeSettings(this) }
+        else Launching.openHomeSettings(this)
     }
 
     private fun pickCoverWidget() {
@@ -198,6 +206,9 @@ class MainActivity : ComponentActivity() {
         } else {
             controller.show(WindowInsetsCompat.Type.statusBars())
         }
+        // Before Android 11 the insets keep the hidden status bar's height. Re-send them so the
+        // listener set in onCreate can drop it.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) ViewCompat.requestApplyInsets(window.decorView)
     }
 
     private fun viewModelOrNull(): LauncherViewModel? = runCatching {
