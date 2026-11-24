@@ -2,6 +2,7 @@ package com.crosspoint.launcher.util
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.net.Uri
 import android.provider.Settings
 import androidx.core.content.FileProvider
@@ -16,7 +17,8 @@ import java.security.MessageDigest
 object ApkInstall {
     /** False until the user allows CrossPoint to install apps; opens that system screen. */
     fun ensureCanInstall(context: Context): Boolean {
-        if (context.packageManager.canRequestPackageInstalls()) return true
+        // Before Android 8 the "unknown sources" setting is global and the system installer asks for it.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || context.packageManager.canRequestPackageInstalls()) return true
         context.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:${context.packageName}"))
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         return false
@@ -26,7 +28,7 @@ object ApkInstall {
         val connection = URL(url).openConnection() as HttpURLConnection
         try {
             check(connection.responseCode == 200) { "Download failed (HTTP ${connection.responseCode})" }
-            val total = connection.contentLengthLong
+            val total = connection.getHeaderField("Content-Length")?.toLongOrNull() ?: -1L
             connection.inputStream.use { input ->
                 file.outputStream().use { output ->
                     val buffer = ByteArray(64 * 1024)

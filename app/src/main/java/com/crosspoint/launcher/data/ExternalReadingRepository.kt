@@ -8,8 +8,10 @@ import android.graphics.BitmapFactory
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import android.os.Process
+import androidx.annotation.RequiresApi
 import com.crosspoint.launcher.model.ExternalReadingState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,7 +20,7 @@ import java.io.File
 import java.security.MessageDigest
 
 class ExternalReadingRepository(private val context: Context, private val sync: SyncRepository) {
-    private val launcherApps: LauncherApps? get() = context.getSystemService(LauncherApps::class.java)
+    private val launcherApps: LauncherApps? get() = context.getSystemService(Context.LAUNCHER_APPS_SERVICE) as? LauncherApps
 
     suspend fun loadExternalReadingState(): ExternalReadingState? = withContext(Dispatchers.IO) {
         listOfNotNull(
@@ -57,6 +59,8 @@ class ExternalReadingRepository(private val context: Context, private val sync: 
         }
 
         val shortcutId = state.shortcutId ?: return false
+        // Launcher shortcuts need Android 7.1.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return false
         return runCatching {
             launcherApps?.startShortcut(
                 state.packageName,
@@ -69,6 +73,7 @@ class ExternalReadingRepository(private val context: Context, private val sync: 
     }
 
     private fun loadLibbyState(): ExternalReadingState? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) return null
         val shortcuts = shortcutsFor(LIBBY_PACKAGE)
         val titleShortcut = shortcuts
             .filter { it.isEnabled }
@@ -187,11 +192,16 @@ class ExternalReadingRepository(private val context: Context, private val sync: 
 
     private fun isOnline(): Boolean = runCatching {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            @Suppress("DEPRECATION")
+            return cm.activeNetworkInfo?.isConnected == true
+        }
         val network = cm.activeNetwork ?: return false
         val caps = cm.getNetworkCapabilities(network) ?: return false
         caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }.getOrDefault(false)
 
+    @RequiresApi(Build.VERSION_CODES.N_MR1)
     private fun shortcutsFor(packageName: String): List<ShortcutInfo> =
         runCatching {
             val query = LauncherApps.ShortcutQuery()
@@ -204,6 +214,7 @@ class ExternalReadingRepository(private val context: Context, private val sync: 
             launcherApps?.getShortcuts(query, Process.myUserHandle()).orEmpty()
         }.getOrDefault(emptyList())
 
+    @RequiresApi(Build.VERSION_CODES.N_MR1)
     private fun ShortcutInfo.isLibbyTitleShortcut(): Boolean {
         val shortcutExtra = safeIntents()
             .mapNotNull { it.extras?.getString("shortcut") }
@@ -211,6 +222,7 @@ class ExternalReadingRepository(private val context: Context, private val sync: 
         return shortcutExtra == "nav:title" || shortLabel?.toString()?.isBookLikeLibbyLabel() == true
     }
 
+    @RequiresApi(Build.VERSION_CODES.N_MR1)
     private fun ShortcutInfo.safeIntents() =
         runCatching { intents?.toList().orEmpty() }.getOrDefault(emptyList())
 

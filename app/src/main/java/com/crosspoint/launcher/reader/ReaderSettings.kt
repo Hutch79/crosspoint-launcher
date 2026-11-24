@@ -93,7 +93,7 @@ class ReaderSettings(private val prefs: SharedPreferences) {
             if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.Q) {
                 val styled = Regex("bold|italic|oblique")
                 val regular = files.firstOrNull { !styled.containsMatchIn(it.nameWithoutExtension.lowercase()) } ?: files.firstOrNull()
-                return@getOrPut regular?.let { runCatching { Typeface.Builder(it).build() }.getOrNull() }
+                return@getOrPut regular?.let { runCatching { fontFile(it) }.getOrNull() }
             }
             runCatching {
                 class Face(val file: File, val weight: Int, val italic: Boolean)
@@ -125,9 +125,14 @@ class ReaderSettings(private val prefs: SharedPreferences) {
             return (common.ifEmpty { bases.firstOrNull().orEmpty() }).replace(Regex("[^\\w .-]"), "_").trim().take(60).ifEmpty { "Font" }
         }
 
+        /** Typeface.Builder needs Android 8; createFromFile works everywhere but can't report a broken font. */
+        private fun fontFile(file: File): Typeface? =
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) Typeface.Builder(file).build()
+            else Typeface.createFromFile(file)
+
         /** Null when the file isn't a usable font. */
         @Synchronized fun loadFont(file: File): Typeface? = loaded.getOrPut("${file.path}:${file.lastModified()}") {
-            runCatching { Typeface.Builder(file).build() }.getOrNull()
+            runCatching { fontFile(file) }.getOrNull()
         }
 
         val OFF_ON = listOf("Off", "On")

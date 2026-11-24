@@ -267,7 +267,11 @@ class ChapterBuilder(
                 // Copy the cell without row spans, so laying it out can't recurse into this span.
                 val copy = SpannableStringBuilder(text, cell.first, cell.last + 1)
                 copy.getSpans(0, copy.length, TableRow::class.java).forEach(copy::removeSpan)
-                StaticLayout.Builder.obtain(copy, 0, copy.length, textPaint, (columns.getOrElse(i) { columns.last() } - PAD * 2).coerceAtLeast(1)).build()
+                val width = (columns.getOrElse(i) { columns.last() } - PAD * 2).coerceAtLeast(1)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M)
+                    StaticLayout.Builder.obtain(copy, 0, copy.length, textPaint, width).build()
+                // StaticLayout.Builder needs Android 6; these are its defaults.
+                else @Suppress("DEPRECATION") StaticLayout(copy, textPaint, width, android.text.Layout.Alignment.ALIGN_NORMAL, 1f, 0f, true)
             }.also { layouts = it; key = paint.textSize }
         }
 

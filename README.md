@@ -1,6 +1,6 @@
 # CrossPoint Android Launcher
 
-Android 8+ launcher with a lightweight built-in EPUB reader and optional CrossPoint Sync account.
+Android 5+ launcher with a lightweight built-in EPUB reader and optional CrossPoint Sync account.
 
 The welcome screen offers **Log in**, **Sign up**, and **Skip for now**. The same account screen and reading stats are available in **Settings → CrossPoint Sync**. Use a sync username/password (the same credentials as a reader), not a website master token. The default server is `https://sync.crosspointreader.com`; self-hosted HTTPS servers are supported.
 

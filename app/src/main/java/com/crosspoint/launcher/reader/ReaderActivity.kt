@@ -6,7 +6,7 @@ import com.crosspoint.launcher.ui.components.headerAction
 
 import android.graphics.Typeface
 import android.os.Bundle
-import android.text.Html
+import androidx.core.text.HtmlCompat
 import android.view.KeyEvent
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -171,8 +171,8 @@ class ReaderActivity : ComponentActivity(), ReaderPanelHost {
             // Long press selects text with native handles; the toolbar offers the firmware's Look Up, Clip and Bookmark.
             setTextIsSelectable(true)
             // Side/page keys put Android in keyboard mode, where the focused text view would get a grey focus wash.
-            defaultFocusHighlightEnabled = false
-            revealOnFocusHint = false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) defaultFocusHighlightEnabled = false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N_MR1) revealOnFocusHint = false
             customSelectionActionModeCallback = selectionActions
         }
         // In paged mode an empty screen-tall spacer follows the text, so even a chapter's last page can scroll
@@ -180,14 +180,14 @@ class ReaderActivity : ComponentActivity(), ReaderPanelHost {
         spacer = View(this)
         scroll = ReaderScroll().apply {
             isSmoothScrollingEnabled = false
-            defaultFocusHighlightEnabled = false
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) defaultFocusHighlightEnabled = false
             addView(LinearLayout(this@ReaderActivity).apply {
                 orientation = LinearLayout.VERTICAL
-                defaultFocusHighlightEnabled = false
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) defaultFocusHighlightEnabled = false
                 addView(text, LinearLayout.LayoutParams(-1, -2))
                 addView(spacer, LinearLayout.LayoutParams(-1, 0))
             })
-            setOnScrollChangeListener { _, _, _, _, _ -> updateFooter() }
+            viewTreeObserver.addOnScrollChangedListener { updateFooter() }  // setOnScrollChangeListener needs Android 6
         }
         statusBar = ReaderStatusBar(this)
         // Paged mode covers the partial line below each page, so pages always end on a whole line.
@@ -722,13 +722,14 @@ class ReaderActivity : ComponentActivity(), ReaderPanelHost {
         // lay out ragged-right instead.
         // ponytail: true justification on Android 11 needs a non-selectable StaticLayout while not selecting.
         val justify = (alignment == 0 || alignment == 4) && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S
-        text.justificationMode = if (justify) android.graphics.text.LineBreaker.JUSTIFICATION_MODE_INTER_WORD else android.graphics.text.LineBreaker.JUSTIFICATION_MODE_NONE
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) text.justificationMode = if (justify) android.graphics.text.LineBreaker.JUSTIFICATION_MODE_INTER_WORD else android.graphics.text.LineBreaker.JUSTIFICATION_MODE_NONE
         text.gravity = Gravity.TOP or when (alignment) { 2 -> Gravity.CENTER_HORIZONTAL; 3 -> Gravity.END; else -> Gravity.START }
         val hyphenate = settings.on(S.HYPHENATION)
-        text.hyphenationFrequency = if (hyphenate) Layout.HYPHENATION_FREQUENCY_NORMAL else Layout.HYPHENATION_FREQUENCY_NONE
+        // Hyphenation and the line breaker setting need Android 6; older versions break greedily without hyphens.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) text.hyphenationFrequency = if (hyphenate) Layout.HYPHENATION_FREQUENCY_NORMAL else Layout.HYPHENATION_FREQUENCY_NONE
         // Always the high-quality breaker: Android 11's simple (greedy) breaker let indented first lines of ragged
         // text run past the right margin.
-        text.breakStrategy = android.graphics.text.LineBreaker.BREAK_STRATEGY_HIGH_QUALITY
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) text.breakStrategy = android.graphics.text.LineBreaker.BREAK_STRATEGY_HIGH_QUALITY
         text.paint.isAntiAlias = settings.on(S.ANTI_ALIASING)
         // Keep outline coverage instead of snapping stems to the pixel grid; allow font-specific comparison.
         text.paint.hinting = if (settings.on(S.FONT_HINTING)) android.graphics.Paint.HINTING_ON else android.graphics.Paint.HINTING_OFF
@@ -863,7 +864,7 @@ class ReaderActivity : ComponentActivity(), ReaderPanelHost {
             runCatching {
                 val id = href.substringAfter('#', "")
                 val html = if (href.startsWith("#")) current.chapterHtml(shownChapter) else String(current.resource(shownChapter, href), Charsets.UTF_8)
-                ReaderText.footnote(html, id.ifEmpty { return@runCatching null })?.let { Html.fromHtml(it, Html.FROM_HTML_MODE_COMPACT).toString().trim() }
+                ReaderText.footnote(html, id.ifEmpty { return@runCatching null })?.let { HtmlCompat.fromHtml(it, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim() }
             }.getOrNull()
         }
     }

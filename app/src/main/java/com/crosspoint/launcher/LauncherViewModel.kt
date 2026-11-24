@@ -157,7 +157,11 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         val now = Date()
         val bm = ctx.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
         val pct = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY).coerceIn(0, 100)
-        val charging = bm.isCharging
+        val charging = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) bm.isCharging else
+            ctx.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+                ?.getIntExtra(BatteryManager.EXTRA_STATUS, -1).let {
+                    it == BatteryManager.BATTERY_STATUS_CHARGING || it == BatteryManager.BATTERY_STATUS_FULL
+                }
         _system.value = SystemState(
             clock = timeFmt.format(now),
             date = dateFmt.format(now),
@@ -343,14 +347,20 @@ class LauncherViewModel(app: Application) : AndroidViewModel(app) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Environment.isExternalStorageManager()
         } else {
-            getApplication<Application>().checkSelfPermission(
-                android.Manifest.permission.READ_EXTERNAL_STORAGE
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                getApplication(), android.Manifest.permission.READ_EXTERNAL_STORAGE
             ) == PackageManager.PERMISSION_GRANTED
         }
 
     private fun isWifiConnected(): Boolean = runCatching {
         val cm = getApplication<Application>()
             .getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            @Suppress("DEPRECATION")
+            val info = cm.activeNetworkInfo ?: return false
+            @Suppress("DEPRECATION")
+            return info.isConnected && (info.type == ConnectivityManager.TYPE_WIFI || info.type == ConnectivityManager.TYPE_ETHERNET)
+        }
         val net = cm.activeNetwork ?: return false
         val caps = cm.getNetworkCapabilities(net) ?: return false
         caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||

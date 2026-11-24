@@ -71,7 +71,7 @@ class AppRepository(private val context: Context) {
             activityName = activityInfo.name,
             label = label,
             icon = bmp,
-            category = activityInfo.applicationInfo?.category ?: -1
+            category = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) activityInfo.applicationInfo?.category ?: -1 else -1
         )
     }
 }

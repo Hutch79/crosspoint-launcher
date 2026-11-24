@@ -1,6 +1,8 @@
 package com.crosspoint.launcher
 
 import android.Manifest
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import com.crosspoint.launcher.ui.components.nativeScreenHeader
 import com.crosspoint.launcher.ui.components.headerAction
 
@@ -65,7 +67,7 @@ class PermissionSetupActivity : ComponentActivity() {
     private fun storagePermissions() = if (Build.VERSION.SDK_INT < 30)
         arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
         else arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-    private fun has(permission: String) = checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+    private fun has(permission: String) = ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
     private fun granted(): Boolean = when (key) {
         "storage" -> (Build.VERSION.SDK_INT > 32 || storagePermissions().all(::has)) &&
             (Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager())
@@ -107,7 +109,7 @@ class PermissionSetupActivity : ComponentActivity() {
 
     private fun requestRuntime(permissions: Array<String>) {
         val permission = permissions.firstOrNull { !has(it) } ?: return
-        if (prefs.getBoolean("asked_$permission", false) && !shouldShowRequestPermissionRationale(permission)) {
+        if (prefs.getBoolean("asked_$permission", false) && !ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
             Launching.openAppInfo(this, packageName)
         } else {
             prefs.edit().putBoolean("asked_$permission", true).apply()
@@ -174,6 +176,8 @@ class PermissionSetupActivity : ComponentActivity() {
             insets
         }
         setContentView(screen)
+        // Before Android 11 a replaced content view is not sent the system bar insets again.
+        ViewCompat.requestApplyInsets(screen)
     }
 
     /** Simple line-art mock of a phone with the gesture arrow, for the tutorial screens. */

@@ -10,7 +10,7 @@ import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
 import android.content.res.Resources
-import android.text.Html
+import androidx.core.text.HtmlCompat
 import android.text.Spannable
 import android.text.SpannableStringBuilder
 import android.text.Spanned
@@ -43,7 +43,7 @@ object ReaderText {
         }
         val css = if (embedded) runCatching { ReaderCss.forChapter(book, chapter, html) }.getOrNull() else null
         val cssPage = ReaderCss.Page(page.width, page.textSize, page.lineHeight, page.color, if (page.night) 0xFF333333.toInt() else 0xFFDDDDDD.toInt())
-        // Our own XHTML builder; chapters it can't parse fall back to Html.fromHtml so a book always opens.
+        // Our own XHTML builder; chapters it can't parse fall back to HtmlCompat.fromHtml so a book always opens.
         val built = runCatching {
             ChapterBuilder(html, book.spineIndices[chapter], page.textSize, page.width, embedded, { elements, i -> css?.preserves(elements, i) == true },
                 { src, _ -> drawable(src) }).build()
@@ -59,7 +59,7 @@ object ReaderText {
             applied = css?.let { runCatching { it.apply(content, built.elements, cssPage) }.getOrNull() }
         } else {
             val source = if (embedded) html else html.replace(Regex("""\sstyle\s*=\s*("[^"]*"|'[^']*')""", RegexOption.IGNORE_CASE), "")
-            content = SpannableStringBuilder(Html.fromHtml(source, Html.FROM_HTML_MODE_COMPACT, { drawable(it) }, null))
+            content = SpannableStringBuilder(HtmlCompat.fromHtml(source, HtmlCompat.FROM_HTML_MODE_COMPACT, { drawable(it) }, null))
             // Night mode inverts the page; book colors would vanish on black.
             if (page.night) {
                 content.getSpans(0, content.length, ForegroundColorSpan::class.java).forEach(content::removeSpan)
